@@ -25,8 +25,11 @@ public final class PrefsProvider extends ContentProvider {
         Bundle b = new Bundle();
         b.putInt(Config.KEY_INSIDE_SCALE, sp.getInt(Config.KEY_INSIDE_SCALE, 100));
         b.putFloat(Config.KEY_INSIDE_DY, sp.getFloat(Config.KEY_INSIDE_DY, 0f));
+        b.putInt(Config.KEY_INSIDE_WEIGHT, sp.getInt(Config.KEY_INSIDE_WEIGHT, 650));
         b.putInt(Config.KEY_OUTSIDE_SIDE, sp.getInt(Config.KEY_OUTSIDE_SIDE, 0));
+        b.putInt(Config.KEY_OUTSIDE_SCALE, sp.getInt(Config.KEY_OUTSIDE_SCALE, 100));
         b.putFloat(Config.KEY_OUTSIDE_DY, sp.getFloat(Config.KEY_OUTSIDE_DY, 0f));
+        b.putInt(Config.KEY_OUTSIDE_WEIGHT, sp.getInt(Config.KEY_OUTSIDE_WEIGHT, 650));
         return b;
     }
 

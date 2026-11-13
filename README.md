@@ -10,8 +10,10 @@
 2. 监听 `HwStatusBarBatteryView.onAttachedToWindow / onBatteryUpdate`，把同一套
    typeface 应用到 `mInsidePercentView` / `mOutsidePercentView`；
 3. 按设置调整：
-   - 图标内百分比：字号（50%–150%）、上下位置（-10~+10 dp）；
-   - 图标外百分比：显示在电池左侧/右侧、上下位置（-10~+10 dp）。
+   - 图标内：字号、字重、上下位置；
+   - 图标外：左侧/右侧、字号、字重、上下位置；
+4. 内显的上下位置通过 `CenteredTextView.onDraw` 平移画布实现（`translationY`
+   会被垂直居中逻辑吃掉），外显仍用 `translationY`。
 
 ## 使用
 
@@ -20,8 +22,6 @@
 
 ## 说明
 
-- 跑道 0 是字体字形，不是 OpenType 的斜杠零特性，所以模块复制的是 typeface，
-  不是 `fontFeatureSettings`；
-- 外显左右是通过调整 `mOutsidePercentView` 在父容器中的顺序实现；
-- 如果系统主题在之后重置电池 typeface，可在 `ZeroHook` 里改为拦截
-  `TextView.setTypeface` 强制替换。
+- 跑道 0 是字体字形，不是 OpenType 的斜杠零特性，所以模块复制的是 typeface；
+- 外显左右通过调整 `mOutsidePercentView` 在父容器中的顺序实现；
+- 字重范围 300–900，步进 50；字号范围 50%–150%。

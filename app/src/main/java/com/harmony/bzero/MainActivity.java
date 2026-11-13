@@ -18,12 +18,10 @@ public final class MainActivity extends Activity {
 
     private static final String PREFS = "config";
 
-    private SeekBar sbScale;
-    private SeekBar sbInsideDy;
-    private SeekBar sbOutsideDy;
-    private TextView tvScale;
-    private TextView tvInsideDy;
-    private TextView tvOutsideDy;
+    private SeekBar sbInsideScale, sbInsideDy, sbInsideWeight;
+    private SeekBar sbOutsideScale, sbOutsideDy, sbOutsideWeight;
+    private TextView tvInsideScale, tvInsideDy, tvInsideWeight;
+    private TextView tvOutsideScale, tvOutsideDy, tvOutsideWeight;
     private RadioGroup rgSide;
     private SharedPreferences sp;
 
@@ -45,7 +43,7 @@ public final class MainActivity extends Activity {
         root.addView(title);
 
         TextView desc = new TextView(this);
-        desc.setText("让电池百分比沿用时钟的跑道 0 字形，并调整显示。\n"
+        desc.setText("电池百分比沿用时钟的跑道 0 字形，并可调整字号、字重、上下位置。\n"
                 + "修改后点「保存并应用」，再重启系统界面。");
         desc.setTextSize(13);
         desc.setPadding(0, dp(6), 0, dp(10));
@@ -53,12 +51,21 @@ public final class MainActivity extends Activity {
 
         // ---------------- 图标内 ----------------
         addSection(root, "图标内百分比");
-        tvScale = addValueRow(root, "字号");
-        sbScale = addSeek(root, 100);
-        sbScale.setOnSeekBarChangeListener(new SimpleListener() {
+        tvInsideScale = addValueRow(root, "字号");
+        sbInsideScale = addSeek(root, 100);
+        sbInsideScale.setOnSeekBarChangeListener(new SimpleListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvScale.setText((progress + 50) + "%");
+                tvInsideScale.setText((progress + 50) + "%");
+            }
+        });
+
+        tvInsideWeight = addValueRow(root, "字重");
+        sbInsideWeight = addSeek(root, 12);
+        sbInsideWeight.setOnSeekBarChangeListener(new SimpleListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvInsideWeight.setText(String.valueOf(300 + progress * 50));
             }
         });
 
@@ -91,6 +98,24 @@ public final class MainActivity extends Activity {
         rgSide.addView(left);
         root.addView(rgSide);
 
+        tvOutsideScale = addValueRow(root, "字号");
+        sbOutsideScale = addSeek(root, 100);
+        sbOutsideScale.setOnSeekBarChangeListener(new SimpleListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvOutsideScale.setText((progress + 50) + "%");
+            }
+        });
+
+        tvOutsideWeight = addValueRow(root, "字重");
+        sbOutsideWeight = addSeek(root, 12);
+        sbOutsideWeight.setOnSeekBarChangeListener(new SimpleListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvOutsideWeight.setText(String.valueOf(300 + progress * 50));
+            }
+        });
+
         tvOutsideDy = addValueRow(root, "上下位置");
         sbOutsideDy = addSeek(root, 40);
         sbOutsideDy.setOnSeekBarChangeListener(new SimpleListener() {
@@ -118,23 +143,33 @@ public final class MainActivity extends Activity {
     }
 
     private void load() {
-        int scale = sp.getInt(Config.KEY_INSIDE_SCALE, 100);
-        float insideDy = sp.getFloat(Config.KEY_INSIDE_DY, 0f);
-        int side = sp.getInt(Config.KEY_OUTSIDE_SIDE, 0);
-        float outsideDy = sp.getFloat(Config.KEY_OUTSIDE_DY, 0f);
+        sbInsideScale.setProgress(Math.max(0, Math.min(100,
+                sp.getInt(Config.KEY_INSIDE_SCALE, 100) - 50)));
+        tvInsideScale.setText((sbInsideScale.getProgress() + 50) + "%");
 
-        sbScale.setProgress(Math.max(0, Math.min(100, scale - 50)));
-        tvScale.setText(scale + "%");
+        int w1 = Math.max(0, Math.min(12,
+                (sp.getInt(Config.KEY_INSIDE_WEIGHT, 650) - 300) / 50));
+        sbInsideWeight.setProgress(w1);
+        tvInsideWeight.setText(String.valueOf(300 + w1 * 50));
 
-        int p1 = Math.round((insideDy + 10f) / 0.5f);
+        int p1 = Math.round((sp.getFloat(Config.KEY_INSIDE_DY, 0f) + 10f) / 0.5f);
         sbInsideDy.setProgress(Math.max(0, Math.min(40, p1)));
         tvInsideDy.setText(dyText(sbInsideDy.getProgress()));
 
-        int p2 = Math.round((outsideDy + 10f) / 0.5f);
+        sbOutsideScale.setProgress(Math.max(0, Math.min(100,
+                sp.getInt(Config.KEY_OUTSIDE_SCALE, 100) - 50)));
+        tvOutsideScale.setText((sbOutsideScale.getProgress() + 50) + "%");
+
+        int w2 = Math.max(0, Math.min(12,
+                (sp.getInt(Config.KEY_OUTSIDE_WEIGHT, 650) - 300) / 50));
+        sbOutsideWeight.setProgress(w2);
+        tvOutsideWeight.setText(String.valueOf(300 + w2 * 50));
+
+        int p2 = Math.round((sp.getFloat(Config.KEY_OUTSIDE_DY, 0f) + 10f) / 0.5f);
         sbOutsideDy.setProgress(Math.max(0, Math.min(40, p2)));
         tvOutsideDy.setText(dyText(sbOutsideDy.getProgress()));
 
-        if (side == 1) {
+        if (sp.getInt(Config.KEY_OUTSIDE_SIDE, 0) == 1) {
             ((RadioButton) rgSide.getChildAt(1)).setChecked(true);
         } else {
             ((RadioButton) rgSide.getChildAt(0)).setChecked(true);
@@ -142,16 +177,15 @@ public final class MainActivity extends Activity {
     }
 
     private void save() {
-        int scale = sbScale.getProgress() + 50;
-        float insideDy = sbInsideDy.getProgress() * 0.5f - 10f;
-        float outsideDy = sbOutsideDy.getProgress() * 0.5f - 10f;
-        int side = rgSide.getCheckedRadioButtonId() == rgSide.getChildAt(1).getId() ? 1 : 0;
-
         sp.edit()
-                .putInt(Config.KEY_INSIDE_SCALE, scale)
-                .putFloat(Config.KEY_INSIDE_DY, insideDy)
-                .putInt(Config.KEY_OUTSIDE_SIDE, side)
-                .putFloat(Config.KEY_OUTSIDE_DY, outsideDy)
+                .putInt(Config.KEY_INSIDE_SCALE, sbInsideScale.getProgress() + 50)
+                .putInt(Config.KEY_INSIDE_WEIGHT, 300 + sbInsideWeight.getProgress() * 50)
+                .putFloat(Config.KEY_INSIDE_DY, sbInsideDy.getProgress() * 0.5f - 10f)
+                .putInt(Config.KEY_OUTSIDE_SIDE,
+                        rgSide.getCheckedRadioButtonId() == rgSide.getChildAt(1).getId() ? 1 : 0)
+                .putInt(Config.KEY_OUTSIDE_SCALE, sbOutsideScale.getProgress() + 50)
+                .putInt(Config.KEY_OUTSIDE_WEIGHT, 300 + sbOutsideWeight.getProgress() * 50)
+                .putFloat(Config.KEY_OUTSIDE_DY, sbOutsideDy.getProgress() * 0.5f - 10f)
                 .apply();
         try {
             getContentResolver().notifyChange(Config.URI, null);
