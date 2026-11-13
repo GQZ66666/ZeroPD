@@ -21,12 +21,18 @@
             </intent-filter>
         </activity>
 
+        <provider
+            android:name=".PrefsProvider"
+            android:authorities="com.harmony.bzero.prefs"
+            android:exported="true"
+            android:enabled="true" />
+
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="让电池百分比沿用时钟的字体特性（斜杠零）。" />
+            android:value="电池百分比沿用时钟的跑道 0 字形，并可调大小、上下位置、内外显侧别。" />
         <meta-data
             android:name="xposedminversion"
             android:value="82" />

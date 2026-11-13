@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">电池斜杠零</string>
+    <string name="app_name">电池UI个性化</string>
     <string-array name="xposed_scope">
         <item>com.android.systemui</item>
         <item>com.hihonor.systemui</item>

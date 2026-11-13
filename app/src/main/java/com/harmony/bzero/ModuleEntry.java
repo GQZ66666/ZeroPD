@@ -2,6 +2,9 @@ package com.harmony.bzero;
 
 import android.app.Application;
 import android.content.Context;
+import android.database.ContentObserver;
+import android.os.Handler;
+import android.os.Looper;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -29,6 +32,15 @@ public final class ModuleEntry implements IXposedHookLoadPackage {
                             return;
                         }
                         try {
+                            Config.load(ctx);
+                            ctx.getContentResolver().registerContentObserver(
+                                    Config.URI, false,
+                                    new ContentObserver(new Handler(Looper.getMainLooper())) {
+                                        @Override
+                                        public void onChange(boolean selfChange) {
+                                            Config.load(ctx);
+                                        }
+                                    });
                             new ZeroHook(ctx).install(lp.classLoader);
                         } catch (Throwable t) {
                             XposedBridge.log(t);

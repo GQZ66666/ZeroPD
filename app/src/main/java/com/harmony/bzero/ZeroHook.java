@@ -2,6 +2,9 @@ package com.harmony.bzero;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.util.TypedValue;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.Collections;
@@ -14,11 +17,8 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * 时钟 HwStatusBarClock 已经能显示斜杠零，说明主题字体里带这个特性；
- * 电池百分比的 CenteredTextView 只写了 "pnum"，所以拿不到斜杠零。
- *
- * 这里把时钟当前的 fontFeatureSettings（必要时连 typeface 一起）复制到
- * HwStatusBarBatteryView 的 mInsidePercentView / mOutsidePercentView。
+ * 时钟的字体是“跑道 0”字形，电池百分比用的是另一套 fallback，所以显示圆弧 0。
+ * 这里把时钟的 typeface 复制到电池百分比，并应用大小/上下位置/内外显设置。
  */
 public final class ZeroHook {
 
@@ -29,6 +29,10 @@ public final class ZeroHook {
     private static volatile Typeface sTypeface;
 
     private static final Map<Object, Boolean> BATTERIES =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<TextView, Float> BASE_SIZE =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<TextView, Integer> SIDE =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final AtomicBoolean sLogged = new AtomicBoolean();
 
@@ -50,7 +54,8 @@ public final class ZeroHook {
                             sFeature = tv.getFontFeatureSettings();
                             sTypeface = tv.getTypeface();
                             if (sLogged.compareAndSet(false, true)) {
-                                XposedBridge.log(ModuleEntry.TAG + ": clock feature=" + sFeature);
+                                XposedBridge.log(ModuleEntry.TAG + ": clock typeface="
+                                        + sTypeface + " feature=" + sFeature);
                             }
                             synchronized (BATTERIES) {
                                 for (Object b : BATTERIES.keySet()) {
@@ -87,27 +92,75 @@ public final class ZeroHook {
     }
 
     private void apply(Object battery) {
-        applyOne(battery, "mInsidePercentView");
-        applyOne(battery, "mOutsidePercentView");
+        applyInside(battery);
+        applyOutside(battery);
     }
 
-    private void applyOne(Object battery, String field) {
-        Object v = field(battery, field);
+    private void applyInside(Object battery) {
+        Object v = field(battery, "mInsidePercentView");
         if (!(v instanceof TextView)) {
             return;
         }
         TextView tv = (TextView) v;
-        String feature = sFeature;
-        if (feature == null || feature.trim().isEmpty()) {
-            feature = "pnum,zero";
-        } else if (!feature.toLowerCase().contains("zero")) {
-            feature = feature + ",zero";
+        applyTypeface(tv);
+        float base = BASE_SIZE.containsKey(tv) ? BASE_SIZE.get(tv) : tv.getTextSize();
+        BASE_SIZE.put(tv, base);
+        int scale = Config.insideScale;
+        if (scale < 30) {
+            scale = 30;
         }
-        tv.setFontFeatureSettings(feature);
+        if (scale > 200) {
+            scale = 200;
+        }
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, base * scale / 100f);
+        tv.setTranslationY(dp(Config.insideDy));
+    }
+
+    private void applyOutside(Object battery) {
+        Object v = field(battery, "mOutsidePercentView");
+        if (!(v instanceof TextView)) {
+            return;
+        }
+        TextView tv = (TextView) v;
+        applyTypeface(tv);
+        tv.setTranslationY(dp(Config.outsideDy));
+
+        int want = Config.outsideSide;
+        Integer last = SIDE.get(tv);
+        if (last != null && last == want) {
+            return;
+        }
+        ViewGroup parent = tv.getParent() instanceof ViewGroup ? (ViewGroup) tv.getParent() : null;
+        if (parent == null) {
+            return;
+        }
+        try {
+            ViewGroup.LayoutParams lp = tv.getLayoutParams();
+            parent.removeView(tv);
+            if (want == 1) {
+                parent.addView(tv, 0, lp);
+            } else {
+                parent.addView(tv, lp);
+            }
+            SIDE.put(tv, want);
+        } catch (Throwable t) {
+            XposedBridge.log(t);
+        }
+    }
+
+    private void applyTypeface(TextView tv) {
         if (sTypeface != null) {
             tv.setTypeface(sTypeface);
         }
+        String feature = sFeature;
+        if (feature != null && !feature.trim().isEmpty()) {
+            tv.setFontFeatureSettings(feature);
+        }
         tv.invalidate();
+    }
+
+    private float dp(float v) {
+        return v * ctx.getResources().getDisplayMetrics().density;
     }
 
     private static Object field(Object obj, String name) {
